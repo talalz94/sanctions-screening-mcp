@@ -1,0 +1,133 @@
+{
+  "system": "matcher-learned",
+  "label": "This matcher, learned weights",
+  "command": "uv run sanctions eval --system matcher-learned",
+  "split": "test",
+  "api_cost_usd_per_1k_screenings": 0.0,
+  "dataset": {
+    "source": "OpenSanctions",
+    "collection": "sanctions",
+    "snapshot": "20261109194706-bbu",
+    "license": "CC BY-NC 4.0, noncommercial use only",
+    "sha256": "eef1d4021b079ee8e2a2149180d41681efe01c14e0a81a422c4cf57bb8bf6697",
+    "people": 41227
+  },
+  "evalset": {
+    "seed": 13,
+    "sha256": "8f59247b3978d2321291c4378ff99874624df2266a53eebfd875065c6aedd21b"
+  },
+  "operating_points": [
+    {
+      "budget_per_1000": 1,
+      "threshold": 0.9816729550046611,
+      "test_recall": 0.6424038080126934,
+      "test_false_alerts_per_1000": 0.3333333333333333,
+      "dev_recall": 0.6475963448549861
+    },
+    {
+      "budget_per_1000": 5,
+      "threshold": 0.9478231110053801,
+      "test_recall": 0.8082110273700912,
+      "test_false_alerts_per_1000": 3.833333333333333,
+      "dev_recall": 0.8186332936034962
+    },
+    {
+      "budget_per_1000": 10,
+      "threshold": 0.9084515293142169,
+      "test_recall": 0.8619595398651329,
+      "test_false_alerts_per_1000": 6.833333333333334,
+      "dev_recall": 0.8746523639253079
+    }
+  ],
+  "recall_by_kind": {
+    "alias": {
+      "n": 663,
+      "recall": 0.7119155354449472
+    },
+    "cross_script": {
+      "n": 379,
+      "recall": 0.7335092348284961
+    },
+    "drop_middle": {
+      "n": 282,
+      "recall": 0.549645390070922
+    },
+    "honorific": {
+      "n": 810,
+      "recall": 0.9790123456790123
+    },
+    "initials": {
+      "n": 344,
+      "recall": 0.5872093023255814
+    },
+    "particles": {
+      "n": 847,
+      "recall": 0.9752066115702479
+    },
+    "spacing": {
+      "n": 23,
+      "recall": 0.7391304347826086
+    },
+    "transliteration": {
+      "n": 859,
+      "recall": 0.8090803259604191
+    },
+    "typo": {
+      "n": 835,
+      "recall": 0.7628742514970059
+    }
+  },
+  "recall_by_group": {
+    "mena_south_asia": {
+      "n": 1926,
+      "recall": 0.7596053997923157
+    },
+    "other": {
+      "n": 3116,
+      "recall": 0.8382541720154044
+    }
+  },
+  "false_alerts_per_1000_by_group": {
+    "mena_south_asia": {
+      "n": 2527,
+      "rate": 3.561535417491096
+    },
+    "other": {
+      "n": 3473,
+      "rate": 4.031097034264325
+    }
+  },
+  "candidate_recall": 0.9918683062276874,
+  "latency_ms": {
+    "p50": 24.70860001631081,
+    "p95": 66.63415504153816,
+    "n": 1004
+  },
+  "counts": {
+    "test_positive": 5042,
+    "test_clean": 6000,
+    "dev_positive": 5034,
+    "dev_clean": 6000
+  },
+  "weights": {
+    "query_coverage": 1.5370439649443235,
+    "name_coverage": 0.34438367191035685,
+    "query_unmatched": -2.039488478183154,
+    "name_unmatched": -1.584625115056725,
+    "strong_matches": -0.3781284963700983,
+    "weakest_match": 1.1139998370129862,
+    "rarest_match": 0.11229258628889043,
+    "length_gap": 0.1287991378234946,
+    "single_token": 0.4315631394173098,
+    "cross_script": 0.1823378297615066,
+    "evidence": 2.3416392831987696
+  },
+  "environment": {
+    "python": "3.12.10",
+    "os": "Windows-10-10.0.19045-SP0",
+    "cpu": "Intel(R) Core(TM) i7-10510U CPU @ 1.80GHz",
+    "logical_cpus": 8
+  },
+  "version": "0.1.0",
+  "created_utc": "2026-11-10T19:36:06+00:00"
+}

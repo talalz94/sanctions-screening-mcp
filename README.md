@@ -1,0 +1,207 @@
+# Sanctions screening MCP
+
+[![CI](https://github.com/talalz94/sanctions-screening-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/talalz94/sanctions-screening-mcp/actions/workflows/ci.yml)
+
+Sanctions name screening that handles Arabic names properly, measured the way a screening team measures it, and served to AI agents as an MCP server.
+
+A screener has one hard job: alert on the listed person however their name was typed, transliterated or written, without burying analysts in alerts on innocent people with common names. This repo screens names against the people on the OpenSanctions sanctions collection (the first line of the results below gives the snapshot and its counts, from `uv run sanctions stats`), reports recall at a fixed false alert budget, and exposes the matcher as four read only MCP tools. An experimental triage agent works an alert through those tools.
+
+**Why this repo exists.** I built sanctions screening and MCP based automation in production. That work is private, so this is a public rebuild of the same problem, written from scratch on open data. No employer or client code, data or details are in here. It is a personal, noncommercial project: OpenSanctions data is CC BY-NC 4.0, and screening real customers with it needs a data license from OpenSanctions.
+
+## Results
+
+<!-- results:start -->
+Snapshot `20261109194706-bbu`: 41,227 people from 77 source lists; 133,565 names indexed.
+
+**Test split**: 5,042 queries that name a listed person and 6,000 clean names. Recall is the share of the named persons that alert, at thresholds set on the dev split to allow 1, 5 or 10 false alerts per 1,000 clean names.
+
+| System | Recall at 1 | Recall at 5 | Recall at 10 | Test false alerts per 1,000 (threshold for 5) | Candidate recall | p50 ms | p95 ms | API cost per 1k screenings | Reproduce |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---|
+| Exact match | 0.0 | 0.0 | 0.0 | 0.0 | n/a | 0.0 | 0.0 | $0.00 | `uv run sanctions eval --system exact` |
+| Fuzzy, character n-gram TF-IDF | 7.5 | 23.1 | 31.9 | 4.7 | n/a | 5.2 | 8.3 | $0.00 | `uv run sanctions eval --system tfidf` |
+| Fuzzy, TF-IDF then RapidFuzz token sort | 17.4 | 32.4 | 43.0 | 3.2 | n/a | 5.7 | 8.2 | $0.00 | `uv run sanctions eval --system tfidf-rapidfuzz` |
+| This matcher, fixed weights | 60.0 | 77.6 | 84.0 | 3.2 | 99.2 | 23.5 | 54.8 | $0.00 | `uv run sanctions eval --system matcher-rules` |
+| This matcher, learned weights | 64.2 | 80.8 | 86.2 | 3.8 | 99.2 | 24.7 | 66.6 | $0.00 | `uv run sanctions eval --system matcher-learned` |
+
+**Recall by kind of query**, test split, at the threshold for 5 false alerts per 1,000:
+
+| Query | n | Exact match | Fuzzy, character n-gram TF-IDF | Fuzzy, TF-IDF then RapidFuzz token sort | This matcher, fixed weights | This matcher, learned weights |
+|---|---:|---:|---:|---:|---:|---:|
+| Real alias held out of the list | 663 | 0.0 | 5.6 | 17.5 | 55.2 | 71.2 |
+| Arabic script name, Latin entries only | 379 | 0.0 | 0.0 | 0.0 | 64.4 | 73.4 |
+| Generated: transliteration | 859 | 0.0 | 12.3 | 62.7 | 82.7 | 80.9 |
+| Generated: typo | 835 | 0.0 | 9.3 | 78.6 | 73.7 | 76.3 |
+| Generated: middle name dropped | 282 | 0.0 | 34.8 | 4.3 | 8.2 | 55.0 |
+| Generated: initial for a name | 344 | 0.0 | 6.1 | 17.2 | 84.3 | 58.7 |
+| Generated: al, bin added or removed | 847 | 0.0 | 59.0 | 21.8 | 98.6 | 97.5 |
+| Generated: title added | 810 | 0.0 | 39.1 | 7.2 | 100.0 | 97.9 |
+| Generated: compound spacing | 23 | 0.0 | 43.5 | 47.8 | 78.3 | 73.9 |
+
+**By name origin**, test split, same threshold. A listed person is in the first group when any of their countries is one of the 22 Arab League members, Iran, Afghanistan or Pakistan, or when any of their names is in Arabic script; everyone else is Other:
+
+| System | Recall, Arab League, Iran, Afghanistan, Pakistan | Recall, Other | False alerts per 1,000, Arab League, Iran, Afghanistan, Pakistan | False alerts per 1,000, Other |
+|---|---:|---:|---:|---:|
+| Exact match | 0.0 | 0.0 | 0.0 | 0.0 |
+| Fuzzy, character n-gram TF-IDF | 25.2 | 21.9 | 9.9 | 0.9 |
+| Fuzzy, TF-IDF then RapidFuzz token sort | 32.3 | 32.5 | 2.4 | 3.7 |
+| This matcher, fixed weights | 73.4 | 80.2 | 4.0 | 2.6 |
+| This matcher, learned weights | 76.0 | 83.8 | 3.6 | 4.0 |
+
+**Learned weights** (logistic regression on standardised features, trained on the train split only):
+
+| Feature | Weight |
+|---|---:|
+| `evidence` | +2.34 |
+| `query_unmatched` | -2.04 |
+| `name_unmatched` | -1.58 |
+| `query_coverage` | +1.54 |
+| `weakest_match` | +1.11 |
+| `single_token` | +0.43 |
+| `strong_matches` | -0.38 |
+| `name_coverage` | +0.34 |
+| `cross_script` | +0.18 |
+| `length_gap` | +0.13 |
+| `rarest_match` | +0.11 |
+
+Measured on Intel(R) Core(TM) i7-10510U CPU @ 1.80GHz (8 logical CPUs, CPU only), Python 3.12.10, 2026-11-10 UTC, OpenSanctions snapshot `20261109194706-bbu`. Latency is one screening at a time, end to end, on the same 1,004 test queries for every system.
+
+Generated by `uv run sanctions report` from `results/`. Do not edit by hand.
+<!-- results:end -->
+
+## Quickstart
+
+You need [uv](https://docs.astral.sh/uv/). It installs Python 3.12 and the exact versions in `uv.lock` (CPU only, Windows, macOS or Linux).
+
+```bash
+git clone https://github.com/talalz94/sanctions-screening-mcp.git
+cd sanctions-screening-mcp
+uv run poe quickstart
+```
+
+`quickstart` downloads the pinned OpenSanctions snapshot after you accept its license notice, builds the eval set, trains the scorer, calibrates the alert threshold, evaluates every system and rewrites the results above. Then screen a name:
+
+```bash
+uv run sanctions screen "Mohamed Abdel Rahman al Tikriti" --explain
+```
+
+An alert flag needs a threshold calibrated on the loaded list, which `sanctions train` sets (5 false alerts per 1,000 dev clean names, on the full index). Until then `screen` prints scores only and says so, and `serve`, `triage` and `triage-eval` refuse to start.
+
+### Use it from Claude Code or Claude Desktop
+
+The MCP server runs over stdio by default:
+
+```bash
+claude mcp add sanctions -- uv --directory /path/to/sanctions-screening-mcp run sanctions serve
+```
+
+For Claude Desktop, add this to `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "sanctions": {
+      "command": "uv",
+      "args": ["--directory", "/path/to/sanctions-screening-mcp", "run", "sanctions", "serve"]
+    }
+  }
+}
+```
+
+`uv run sanctions serve --http` serves stateless streamable HTTP on `http://127.0.0.1:8000/mcp` instead, the shape a hosted runtime expects.
+
+| Tool | What it returns |
+|---|---|
+| `screen_party(name, birth_year?, country?, limit?)` | Ranked candidates with scores, an alert flag, and whether birth year and country agree. Country is a 2 letter ISO code (UK means GB). A 2 letter code the tool does not recognise, such as ZZ, counts as unknown, never as a disagreement; any other value, such as IRQ or Iraq, is rejected |
+| `get_entity(entity_id)` | The full record of one listed person: names, aliases, birth dates, countries, lists, listing details |
+| `explain_match(name, entity_id)` | The same score `screen_party` gave that person, which listed name it came from, how each word aligned and whether it counts as matched, the words left unmatched on both sides, every feature value, and a reason when nothing could be compared or the person was not among the candidates |
+| `list_sources()` | The list loaded (snapshot, license and SHA-256 when it is the pinned one), its size, the scorer, the alert threshold and where that threshold came from, and the largest lists |
+
+All four are read only. The server's instructions and the tool descriptions say that names, aliases and listing details are list text: data, never instructions. An agent reading these results must not act on text planted in a record, and the triage agent below is tested on exactly that.
+
+## How it works
+
+```mermaid
+flowchart LR
+    q["Name to screen<br/>Latin, Arabic or Cyrillic script"] --> n["Normaliser<br/>transliterate, drop titles and particles,<br/>unify Abd al-X, -ullah, common spellings"]
+    n --> k["Consonant skeletons<br/>Husayn, Hussein, حسين: hsn"]
+    k --> c["Candidate search<br/>exact and one edit keys,<br/>best 200 people by word rarity"]
+    w[("OpenSanctions snapshot<br/>pinned, local only")] --> i["Index<br/>every name and alias"]
+    i --> c
+    c --> s["Scorer<br/>word alignment, 11 features,<br/>learned weights"]
+    s --> r["Candidates, scores, alert flag,<br/>word by word explanation"]
+    r --> m["MCP server<br/>4 read only tools"]
+```
+
+- **Normaliser.** Arabic script (with Persian and Urdu letters) and Cyrillic (including the Serbian, Macedonian and Central Asian letters) are transliterated, and Latin letters with no accent to strip (ı, ł, đ, ø, ə) are spelled out, so no letter splits a word. A name that mixes scripts is read one script at a time. Titles (Sheikh, Haji, Major General), articles (al, el, and sun letter forms such as ad-Din), connectors (bin, ibn, ben, ould) and "s/o" are dropped; Hafiz is dropped only before two or more name words, since it is also a given name. "SURNAME, Given" is reordered. Abd al-X compounds, -ullah and -uddin suffixes and about 50 groups of common given name spellings are unified.
+- **Skeletons.** Each word gets a consonant key with vowels dropped and spelling variants merged (kh, gh, q, dh and similar). Arabic script omits short vowels, so this is the level at which Latin and Arabic script names can meet. Some spellings can be read two ways, and those words get a second key: Latin th, sh, kh and dh (one Arabic letter in Muthanna, two in Fathi), Latin dj (Djamel, or Djordjevic for Đorđević), Latin gh (غ, or ق in Persian: Ghasem for Qasim), Arabic ض (d in Ramadan, z in the Persian and Urdu Ramzan), Arabic و where it is a consonant (w in Arabic, v in Persian: Vahid, Javad), Cyrillic г (g in Russian, h in Ukrainian: Oleg and Oleh), and a leading al or ال (the article in Alhashimi, part of the name in Ilyas).
+- **Candidates.** Every word is indexed under its exact keys and, when a key has four letters or more, under each key with one letter deleted. Shorter keys, such as hsn for Husain and Hasan, get no deletion keys, so a misspelling has to keep a short key intact to be found through that word. Candidates are ranked by the rarity of the words they share, with exact keys counting fully and fuzzy keys 0.4, and the best 200 people (not names) go on to scoring.
+- **Scorer.** Query and listed words are aligned one to one regardless of order. A shared consonant key only counts as a strong match when the vowel pattern agrees too (Kareem and Karim, not Karim and Akram), and two different common names that share consonants (Hasan and Husain, Bashir and Bashar) are never a strong match. Across scripts a full match needs at least two shared consonants and the same final long i on both sides, because Arabic script writes long vowels (Amir is not امیری, Amiri). Eleven features (coverage both ways, unmatched words both ways, how many words match strongly, the weakest match, the rarest strong match, the total rarity of strong matches, length gap, single word names, and an Arabic script query against a Latin name) go into a logistic regression trained on the train split. The weights are in the results above.
+
+### Choices I rejected
+
+- **An embedding model for names.** Names are short and their variation follows rules (transliteration, particles, compounds) that a normaliser handles transparently, and every alert has to be explainable to an analyst word by word. An embedding model could be a later ablation, not the base.
+- **Matching against every name.** Comparing each query with every listed name is too slow for one screening at a time. The skeleton index keeps candidate recall near the top while scoring only the best names of 200 people.
+- **A single fuzzy ratio threshold.** TF-IDF and RapidFuzz are in the table as baselines. They do not know that Muhammad and Mohammed are one name, or that Arabic script has no short vowels. A first try with RapidFuzz's token set ratio alerted on nothing at any budget here: it scores 100 whenever one name's words are a subset of the other's ("Muhammad Ali" against "Muhammad Ali Hassan"), so clean names hit the ceiling. The baseline uses token sort ratio instead.
+- **Tuning on test.** Thresholds are set on dev and only then applied to test.
+
+## Alert triage agent (experimental)
+
+`sanctions triage` hands one alert to a model that works it through three of the same tools (`screen_party`, `get_entity` and `explain_match`, called on the screening service directly; `list_sources` is not offered), then proposes one of three dispositions: likely match, likely false positive or escalate. A code rule, not the model, decides whether a clear can stand. It stands only when the customer's birth year or country disagrees with the record and none agrees, the agent looked at the record or the explanation for that person first, and every reason it gives cites a tool result it received (the code checks which result is cited, not what the reason claims). Anything else is escalated, and a person makes every final decision; the tool keeps no case records.
+
+```bash
+uv run sanctions triage "NAME" --entity-id ENTITY_ID --birth-year 1970 --country iq
+uv run sanctions triage-eval --split dev --limit 30
+```
+
+`triage-eval` builds scripted alerts from the eval set: real matches whose identifiers agree, are missing, or conflict; false positives with a disagreeing identifier; and prompt injection planted in a list record or in the customer's name. It shows a cost estimate and asks before it calls a paid model. The summary goes to `results/agent/<split>.json` (accuracy, clears on real matches before and after the code rule, injection followed or reported, refusals, cost per 1,000 alerts); one row per alert goes to the data folder, which git ignores because the rows hold names.
+
+The model is set in `settings.toml`: Anthropic's Claude by default (`claude-opus-5-5`), or Amazon Bedrock, OpenAI, Azure OpenAI or a local Ollama model. Every setting can be overridden by an environment variable; `.env.example` lists them all, with no values. Credentials are never read from `settings.toml`: API keys come from environment variables, and Bedrock can also use any source in the usual AWS chain, such as a profile in `~/.aws`. A settings file given with `--settings` must exist and may hold only known settings, so a typo never quietly falls back to the default model. Bedrock with AWS credentials needs the extra: `uv sync --extra bedrock`.
+
+**Status.** The agent and its eval are built and tested with scripted models. No paid run has been made yet, so there are no agent numbers here.
+
+## Eval method
+
+- **Data.** One pinned OpenSanctions snapshot, people only. See the [data card](docs/DATA_CARD.md).
+- **Splits by person.** People are split 60/20/20 into train, dev and test by a hash of their id. The scorer learns from train, thresholds come from dev, and the tables report test only.
+- **Queries that should alert.** A real alias held out of the index (a spelling variant the list publishers recorded, never one whose twin in another case or word order stays indexed); an Arabic script name with every Arabic script name of that person held out; and generated variants of the listed name (transliteration, typo, dropped middle name, initial, al and bin added or removed, title added, compound spacing).
+- **Clean queries.** Real given names of one listed person joined to the family name of a different listed person from the same name origin group, in Latin script, plus a smaller set written in Arabic script from the Arabic script names on the list, so false alerts on Arabic script queries are counted too. A clean name is discarded when no name only screener could tell it from someone real: when it matches a listed name, a query that should alert or another clean name word for word under the matcher's own normalisation, or when it is a listed name with its middle names left out. Different names that only share consonants (Hamid Ali against a listed Ahmad Ali) stay in, so their false alerts count. The [data card](docs/DATA_CARD.md) has the exact rules.
+- **Metric.** For each system, the dev split sets the threshold that allows 1, 5 or 10 false alerts per 1,000 clean names. Recall is the share of test queries whose listed person scores at or above that threshold. Test false alerts at the same threshold are reported too, so drift between splits is visible.
+- **Latency.** One screening at a time, end to end, on a laptop CPU, timed on the same evenly spaced sample of test queries for every system. Screening calls no model, so its API cost is $0.00.
+
+## Data and model
+
+- [Data card](docs/DATA_CARD.md): the snapshot, its license, how the eval set is built, known limits.
+- [Model card](docs/MODEL_CARD.md): the matcher, intended use, out of scope uses, risks.
+- Tests and CI use a small list of invented people in `tests/fixtures/`. CI never downloads OpenSanctions.
+
+## Limitations
+
+- Names only. Birth year and country agreement are returned by the MCP tool but do not change the score yet; in practice they clear many alerts.
+- The generated variants come from rules that share assumptions with the normaliser, so they favour this matcher. The real alias and Arabic script rows are the fairer comparison.
+- Clean names are built from listed names, so they look like the names that trigger alerts, not like a random customer base.
+- People only. Organisations, vessels and aircraft are not screened yet.
+- Hand written transliteration covers common Arabic, Persian, South Asian, Turkic and Slavic patterns, not every language. A name written only in another script (Chinese, Greek, Hebrew and so on) is not indexed, so that person is found only through their other names.
+- Latency was measured on one laptop CPU.
+- The triage agent has been tested only with scripted models so far; its accuracy and cost on a real model are not measured yet.
+
+## Next
+
+1. **A paid run of the agent eval**, with accuracy, clears on real matches, injection resistance and cost per 1,000 alerts in the table.
+2. **Birth date and nationality** as scoring features, with their effect on false alerts measured.
+3. **The same server on Amazon Bedrock AgentCore**, behind AgentCore Gateway, with latency and cost compared with the local run.
+4. **Organisations and vessels.**
+
+## Layout
+
+```
+src/sanctions_mcp/   normaliser, variants, eval set, index, scorer, matcher, baselines, eval, report, MCP server, CLI
+src/sanctions_mcp/agent/   triage agent, model adapters, scripted alerts, agent eval
+tests/               unit, agent and MCP contract tests on an invented watchlist
+results/             one JSON per system plus stats.json, written by `sanctions reproduce`; agent/ for agent eval summaries
+docs/                data card and model card
+settings.toml        the agent's model settings (no secrets); .env.example lists the environment variables
+```
+
+## Credits and license
+
+Sanctions data from [OpenSanctions](https://www.opensanctions.org), licensed CC BY-NC 4.0. The code in this repo is MIT licensed; that license does not cover the data.

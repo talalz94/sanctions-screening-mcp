@@ -1,0 +1,47 @@
+# List data, eval sets, trained models, agent runs and caches never go into git, wherever
+# the data dir is (--data-dir or SANCTIONS_DATA_DIR). The folders are matched at any depth.
+data/
+opensanctions/
+evalsets/
+models/
+agent-runs/
+ci-output/
+*.csv
+*.part
+*.parquet
+*.pkl
+*.joblib
+*.npy
+*.npz
+*.pt
+*.pth
+*.bin
+*.safetensors
+*.onnx
+*.zip
+
+# The one exception: the fictional test list, which the tests and CI read. Only its CSV is
+# kept; eval sets, models and partial downloads made there stay ignored.
+!tests/fixtures/data/
+!tests/fixtures/data/opensanctions/
+!tests/fixtures/data/opensanctions/*/*.csv
+
+# Secrets
+.env*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
+
+# OS and editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

@@ -1,0 +1,54 @@
+{
+  "snapshot": "20261109194706-bbu",
+  "list_sha256": "eef1d4021b079ee8e2a2149180d41681efe01c14e0a81a422c4cf57bb8bf6697",
+  "people": 41227,
+  "source_lists": 77,
+  "names_including_aliases": 172986,
+  "names_listed": 167320,
+  "names_indexed": 133565,
+  "people_with_an_arabic_script_name": 7682,
+  "people_with_a_birth_date": 30811,
+  "eval_set": {
+    "sha256": "8f59247b3978d2321291c4378ff99874624df2266a53eebfd875065c6aedd21b",
+    "names_held_out_of_the_index": 4925,
+    "queries": {
+      "train": {
+        "alias": 1379,
+        "clean": 7000,
+        "cross_script": 818,
+        "drop_middle": 606,
+        "honorific": 1714,
+        "initials": 646,
+        "particles": 1691,
+        "spacing": 80,
+        "transliteration": 1652,
+        "typo": 1611
+      },
+      "dev": {
+        "alias": 634,
+        "clean": 6000,
+        "cross_script": 400,
+        "drop_middle": 280,
+        "honorific": 834,
+        "initials": 342,
+        "particles": 817,
+        "spacing": 48,
+        "transliteration": 876,
+        "typo": 803
+      },
+      "test": {
+        "alias": 663,
+        "clean": 6000,
+        "cross_script": 379,
+        "drop_middle": 282,
+        "honorific": 810,
+        "initials": 344,
+        "particles": 847,
+        "spacing": 23,
+        "transliteration": 859,
+        "typo": 835
+      }
+    }
+  },
+  "created_utc": "2026-11-10T19:36:21+00:00"
+}

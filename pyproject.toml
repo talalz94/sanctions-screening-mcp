@@ -1,0 +1,64 @@
+[project]
+name = "sanctions-screening-mcp"
+version = "0.1.0"
+description = "Sanctions name screening with Arabic transliteration, measured like a screening team measures it, exposed as an MCP server."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Talal Zahid" }]
+requires-python = ">=3.12,<3.14"
+dependencies = [
+    "anthropic==2.7.0",
+    "httpx==0.28.1",
+    "mcp==2.3.0",
+    "numpy==2.5.4",
+    "pydantic==2.14.3",
+    "rapidfuzz==3.14.6",
+    "scikit-learn==1.9.1",
+]
+
+[project.optional-dependencies]
+# Only needed when settings.toml sets provider = "bedrock".
+bedrock = ["anthropic[bedrock]==2.7.0"]
+
+[project.scripts]
+sanctions = "sanctions_mcp.cli:main"
+
+[dependency-groups]
+dev = [
+    "pytest==9.2.0",
+    "ruff==0.17.4",
+    "poethepoet==0.49.0",
+]
+
+[build-system]
+requires = ["hatchling==1.33.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/sanctions_mcp"]
+
+[tool.poe.tasks]
+download = { cmd = "sanctions download", help = "Fetch the pinned OpenSanctions snapshot (asks you to accept its license)" }
+reproduce = { cmd = "sanctions reproduce", help = "Build the eval sets, train, evaluate every system and rewrite the README results" }
+quickstart = { sequence = ["download", "reproduce"], help = "Download the data and reproduce every number" }
+lint = { cmd = "ruff check .", help = "Lint" }
+format = { cmd = "ruff format .", help = "Format the code" }
+test = { cmd = "pytest -q", help = "Unit tests on the synthetic watchlist" }
+check = { sequence = ["lint", { cmd = "ruff format --check ." }, "test"], help = "Lint, format check and tests (CI also runs a CLI smoke test)" }
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+# Transliteration tables and test names hold Arabic and Cyrillic letters on purpose.
+"src/sanctions_mcp/normalize.py" = ["RUF001", "RUF002", "RUF003"]
+"tests/*" = ["RUF001"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"

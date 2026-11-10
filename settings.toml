@@ -1,0 +1,19 @@
+# Triage agent settings. No secrets here: API keys come from environment variables.
+# Every field can be overridden by an environment variable. src/sanctions_mcp/settings.py
+# lists them all, and .env.example lists the same names.
+
+[llm]
+provider = "anthropic"   # anthropic | bedrock | openai | azure | ollama
+model = "claude-opus-5-5"
+effort = "medium"        # low | medium | high | xhigh | max (Claude models)
+max_tokens = 16000       # 1 to 16000 per model call: calls are not streamed
+
+# USD per million tokens, used only to report cost per 1,000 alerts.
+# Claude Opus 5.5 list prices; update them if you switch model or the prices change.
+# A turn answered by a refusal fallback model is reported as unpriced, not at these rates.
+price_input = 4.0
+price_output = 20.0
+price_cache_read = 0.20
+
+# aws_region = "us-east-1"   # provider bedrock only
+# base_url = ""              # replaces the OpenAI, Azure or Ollama endpoint

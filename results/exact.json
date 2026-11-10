@@ -1,0 +1,120 @@
+{
+  "system": "exact",
+  "label": "Exact match",
+  "command": "uv run sanctions eval --system exact",
+  "split": "test",
+  "api_cost_usd_per_1k_screenings": 0.0,
+  "dataset": {
+    "source": "OpenSanctions",
+    "collection": "sanctions",
+    "snapshot": "20261109194706-bbu",
+    "license": "CC BY-NC 4.0, noncommercial use only",
+    "sha256": "eef1d4021b079ee8e2a2149180d41681efe01c14e0a81a422c4cf57bb8bf6697",
+    "people": 41227
+  },
+  "evalset": {
+    "seed": 13,
+    "sha256": "8f59247b3978d2321291c4378ff99874624df2266a53eebfd875065c6aedd21b"
+  },
+  "operating_points": [
+    {
+      "budget_per_1000": 1,
+      "threshold": 5e-324,
+      "test_recall": 0.0,
+      "test_false_alerts_per_1000": 0.0,
+      "dev_recall": 0.0
+    },
+    {
+      "budget_per_1000": 5,
+      "threshold": 5e-324,
+      "test_recall": 0.0,
+      "test_false_alerts_per_1000": 0.0,
+      "dev_recall": 0.0
+    },
+    {
+      "budget_per_1000": 10,
+      "threshold": 5e-324,
+      "test_recall": 0.0,
+      "test_false_alerts_per_1000": 0.0,
+      "dev_recall": 0.0
+    }
+  ],
+  "recall_by_kind": {
+    "alias": {
+      "n": 663,
+      "recall": 0.0
+    },
+    "cross_script": {
+      "n": 379,
+      "recall": 0.0
+    },
+    "drop_middle": {
+      "n": 282,
+      "recall": 0.0
+    },
+    "honorific": {
+      "n": 810,
+      "recall": 0.0
+    },
+    "initials": {
+      "n": 344,
+      "recall": 0.0
+    },
+    "particles": {
+      "n": 847,
+      "recall": 0.0
+    },
+    "spacing": {
+      "n": 23,
+      "recall": 0.0
+    },
+    "transliteration": {
+      "n": 859,
+      "recall": 0.0
+    },
+    "typo": {
+      "n": 835,
+      "recall": 0.0
+    }
+  },
+  "recall_by_group": {
+    "mena_south_asia": {
+      "n": 1926,
+      "recall": 0.0
+    },
+    "other": {
+      "n": 3116,
+      "recall": 0.0
+    }
+  },
+  "false_alerts_per_1000_by_group": {
+    "mena_south_asia": {
+      "n": 2527,
+      "rate": 0.0
+    },
+    "other": {
+      "n": 3473,
+      "rate": 0.0
+    }
+  },
+  "candidate_recall": null,
+  "latency_ms": {
+    "p50": 0.01880002673715353,
+    "p95": 0.03517003497108815,
+    "n": 1004
+  },
+  "counts": {
+    "test_positive": 5042,
+    "test_clean": 6000,
+    "dev_positive": 5034,
+    "dev_clean": 6000
+  },
+  "environment": {
+    "python": "3.12.10",
+    "os": "Windows-10-10.0.19045-SP0",
+    "cpu": "Intel(R) Core(TM) i7-10510U CPU @ 1.80GHz",
+    "logical_cpus": 8
+  },
+  "version": "0.1.0",
+  "created_utc": "2026-11-10T19:03:23+00:00"
+}
